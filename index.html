@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Trailer with Haptics</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #0d1a26;
+            color: #ffffff;
+            text-align: center;
+        }
+        .container {
+            width: 95%;
+            max-width: 800px;
+            background-color: #1a2c3a;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        }
+        h1 {
+            color: #e6e6e6;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        video {
+            width: 100%;
+            border-radius: 8px;
+            border: 2px solid #555;
+        }
+        #supportMessage {
+            margin-top: 15px;
+            font-size: 1.1em;
+            font-style: italic;
+            padding: 10px;
+            background-color: #2b3d4f;
+            border-radius: 6px;
+        }
+        .note {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #aaaaaa;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>F1 Trailer with Haptics</h1>
+        <video id="hapticVideo" controls>
+            <source src="assets/f1-trailer.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <p id="supportMessage"></p>
+        <p class="note">
+            Press play on the video to start the haptic experience.
+        </p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const video = document.getElementById('hapticVideo');
+            const supportMessage = document.getElementById('supportMessage');
+            let hapticIntervalId = null;
+
+            if (!("vibrate" in navigator)) {
+                supportMessage.textContent = "❌ Your device does not support the Web Vibration API. Haptics will not work.";
+                return;
+            }
+            supportMessage.textContent = "✅ Haptics are enabled! Press play on the video.";
+
+            let hapticData = [];
+            try {
+                // Ensure this path matches your file structure
+                const response = await fetch('data/haptic-data.json');
+                hapticData = await response.json();
+            } catch (error) {
+                console.error("Error loading haptic data:", error);
+                supportMessage.textContent = "Error loading haptic data. Haptics are disabled.";
+                return;
+            }
+
+            let lastVibratedIndex = -1;
+
+            video.addEventListener('timeupdate', () => {
+                const currentTime = video.currentTime;
+
+                // Stop any continuous vibration if the video pauses or ends
+                if (video.paused || video.ended) {
+                    if (hapticIntervalId) {
+                        clearInterval(hapticIntervalId);
+                        hapticIntervalId = null;
+                        navigator.vibrate(0); // Stop vibration
+                    }
+                    return;
+                }
+
+                for (let i = 0; i < hapticData.length; i++) {
+                    const event = hapticData[i];
+
+                    // Check for start of a new haptic event
+                    if (currentTime >= event.time && i > lastVibratedIndex) {
+                        // Handle continuous events
+                        if (event.event_type === 'continuous') {
+                            // Start the continuous pattern
+                            hapticIntervalId = setInterval(() => {
+                                navigator.vibrate(event.pattern);
+                            }, event.pattern.reduce((a, b) => a + b, 0)); // Interval duration is the sum of the pattern's on/off times
+                            lastVibratedIndex = i;
+                        }
+                        // Handle single pulse events
+                        else if (event.event_type === 'pulse') {
+                            if (event.duration) {
+                                navigator.vibrate(event.duration);
+                            } else if (event.pattern) {
+                                navigator.vibrate(event.pattern);
+                            }
+                            lastVibratedIndex = i;
+                        }
+                    }
+
+                    // Check for the stop time of a continuous event
+                    if (event.event_type === 'continuous' && hapticIntervalId && currentTime >= event.stop_time) {
+                        clearInterval(hapticIntervalId);
+                        hapticIntervalId = null;
+                        navigator.vibrate(0); // Stop vibration
+                    }
+                }
+            });
+
+            // Reset haptic tracking when the video starts over
+            video.addEventListener('play', () => {
+                lastVibratedIndex = -1;
+                if (hapticIntervalId) {
+                    clearInterval(hapticIntervalId);
+                    hapticIntervalId = null;
+                    navigator.vibrate(0);
+                }
+            });
+            
+            // Clear interval if video ends
+            video.addEventListener('ended', () => {
+                if (hapticIntervalId) {
+                    clearInterval(hapticIntervalId);
+                    hapticIntervalId = null;
+                    navigator.vibrate(0);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

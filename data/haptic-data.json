@@ -1,0 +1,32 @@
+[
+    {
+        "time": 0.0,
+        "event_type": "continuous",
+        "pattern": [25, 25],
+        "stop_time": 2.5
+    },
+    {
+        "time": 6.0,
+        "event_type": "continuous",
+        "pattern": [30, 30],
+        "stop_time": 10.0
+    },
+    {
+        "time": 10.0,
+        "event_type": "continuous",
+        "pattern": [25, 15, 25],
+        "stop_time": 15.0
+    },
+    {
+        "time": 15.0,
+        "event_type": "continuous",
+        "pattern": [25, 25],
+        "stop_time": 20.0
+    },
+    {
+        "time": 28.0,
+        "event_type": "continuous",
+        "pattern": [100, 50, 50, 50],
+        "stop_time": 42.0
+    }
+]
